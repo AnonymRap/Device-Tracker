@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F6F8FC">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>MUF Device Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg: #F5F7FC;
+    --surface: #FFFFFF;
+    --surface-2: #F1F4FA;
+    --surface-tint: #EEF1FF;
+    --line: #E3E8F5;
+    --line-soft: #ECEFF9;
+    --text: #12172A;
+    --text-dim: #5B6480;
+    --text-faint: #9AA2BC;
+
+    --violet: #6C5CE7;
+    --violet-dim: #5646D1;
+    --coral: #FF6B4A;
+    --coral-dim: #E85536;
+
+    --amber: #F59E0B;
+    --blue: #3B82F6;
+    --purple: #A855F7;
+    --teal: #14B8A6;
+    --gray: #64748B;
+    --red: #EF4444;
+    --green: #16A34A;
+
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  *{ box-sizing: border-box; margin:0; padding:0; -webkit-tap-highlight-color: transparent; }
+  html,body{ height:100%; }
+  body{
+    min-height:100dvh;
+    display:flex; flex-direction:column;
+    background:
+      radial-gradient(900px 500px at 12% -10%, #ECE9FF 0%, transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, #FFEDE6 0%, transparent 50%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  header{ position:relative; z-index:1; padding: 22px 20px 16px; }
+  .brand-row{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:42px; height:42px; border-radius:12px;
+    background: linear-gradient(150deg, var(--violet), #A78BFA);
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-mono); font-weight:700; font-size:14px; color:#fff;
+    flex-shrink:0;
+    box-shadow: 0 6px 16px rgba(108,92,231,0.32);
+  }
+  h1{
+    font-family: var(--font-display); font-size: 20px; font-weight:700; letter-spacing:-0.01em;
+    background: linear-gradient(90deg, var(--violet), var(--coral));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .subtitle{ font-size: 12px; color: var(--text-dim); margin-top:2px; font-family: var(--font-mono); letter-spacing:0.03em; }
+
+  .sync-pill{
+    display:inline-flex; align-items:center; gap:7px;
+    margin-top:12px; padding:6px 12px; border-radius:999px;
+    background: var(--surface); border: 1px solid var(--line);
+    font-size:11.5px; font-weight:600; color: var(--text-dim);
+    cursor:pointer; user-select:none;
+  }
+  .sync-pill .sync-dot{ width:7px; height:7px; border-radius:50%; background: var(--text-faint); flex-shrink:0; }
+  .sync-pill.ok .sync-dot{ background: var(--green); }
+  .sync-pill.off .sync-dot{ background: var(--red); }
+  .sync-pill.loading .sync-dot{ background: var(--amber); animation: pulse 1s infinite ease-in-out; }
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.35; } }
+
+  main{ position:relative; z-index:1; flex:1; width:100%; max-width:620px; margin:0 auto; padding: 6px 16px 100px; }
+
+  .search-wrap{ position:relative; margin-bottom:14px; }
+  .search-icon{ position:absolute; left:16px; top:50%; transform:translateY(-50%); color: var(--text-faint); pointer-events:none; }
+  #search{
+    width:100%; background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px;
+    padding: 16px 44px 16px 46px; font-family: var(--font-mono); font-size: 16px; letter-spacing:0.02em;
+    color: var(--text); outline:none; box-shadow: 0 2px 10px rgba(30,40,90,0.05);
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  #search::placeholder{ color: var(--text-faint); font-family: var(--font-body); letter-spacing:normal; }
+  #search:focus{ border-color: var(--violet); box-shadow: 0 0 0 4px rgba(108,92,231,0.14); }
+  .clear-btn{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%); width:30px; height:30px; border-radius:9px; border:none;
+    background: var(--surface-2); color: var(--text-dim); display:none; align-items:center; justify-content:center; cursor:pointer; font-size:15px;
+  }
+  .clear-btn.show{ display:flex; }
+
+  .chips{ display:flex; gap:8px; overflow-x:auto; padding: 2px 2px 8px; margin-bottom:14px; scrollbar-width:none; }
+  .chips::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex-shrink:0; display:flex; align-items:center; gap:7px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 999px; padding: 8px 14px; font-size:12.5px; font-weight:600; color: var(--text-dim);
+    cursor:pointer; transition: all .15s ease; white-space:nowrap;
+  }
+  .chip .dot{ width:7px; height:7px; border-radius:50%; }
+  .chip.active{ border-color: var(--violet); color: var(--violet-dim); background: var(--surface-tint); }
+  .chip .count{ font-family: var(--font-mono); color: var(--text-faint); }
+  .chip.active .count{ color: var(--violet); }
+
+  #results{ display:flex; flex-direction:column; gap:8px; }
+  .row-item{
+    display:flex; align-items:center; gap:12px; background: var(--surface); border: 1px solid var(--line-soft);
+    border-radius: 14px; padding: 13px 14px; cursor:pointer; box-shadow: 0 1px 3px rgba(30,40,90,0.04);
+    transition: border-color .12s ease, transform .08s ease, box-shadow .12s ease;
+  }
+  .row-item:active{ transform: scale(0.985); }
+  .row-item:hover{ border-color: var(--violet); box-shadow: 0 3px 10px rgba(108,92,231,0.1); }
+  .row-sn{
+    font-family: var(--font-mono); font-size:14.5px; font-weight:600; color: var(--text);
+    flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .row-sn mark{ background: #FFE3A3; color: var(--text); border-radius:3px; padding:0 1px; }
+  .loc-pill{ flex-shrink:0; font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px; font-family: var(--font-mono); letter-spacing:0.02em; }
+  .chev{ color: var(--text-faint); flex-shrink:0; }
+
+  .list-meta{ font-size:11.5px; color: var(--text-faint); padding: 2px 4px 12px; font-family: var(--font-mono); }
+
+  .empty-state{ display:flex; flex-direction:column; align-items:center; text-align:center; padding: 56px 20px 20px; color: var(--text-faint); }
+  .empty-state .icon{ font-size:34px; margin-bottom:14px; opacity:0.5; }
+  .empty-state .title{ font-family: var(--font-display); font-size:15px; color: var(--text-dim); margin-bottom:6px; }
+  .empty-state .desc{ font-size:12.5px; max-width:260px; line-height:1.5; }
+
+  .fab{
+    position:fixed; right:20px; bottom:26px; z-index:15; width:58px; height:58px; border-radius:18px; border:none;
+    background: linear-gradient(150deg, var(--coral), var(--coral-dim)); color:#fff; font-size:26px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow: 0 10px 24px rgba(255,107,74,0.4);
+    transition: transform .15s ease;
+  }
+  .fab:active{ transform: scale(0.93); }
+
+  .overlay{
+    position:fixed; inset:0; z-index:20; background: rgba(20,25,45,0.45); backdrop-filter: blur(2px);
+    display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  @media (min-width:640px){ .overlay{ align-items:center; } }
+
+  .ticket{
+    width:100%; max-width:460px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 24px 24px 0 0; padding: 10px 22px 28px; transform: translateY(30px);
+    transition: transform .25s cubic-bezier(.2,.8,.2,1); max-height: 88vh; overflow-y:auto;
+    box-shadow: 0 -10px 40px rgba(20,25,60,0.15);
+  }
+  @media (min-width:640px){ .ticket{ border-radius:24px; } }
+  .overlay.show .ticket{ transform: translateY(0); }
+
+  .drag-handle{ width:38px; height:4px; border-radius:99px; background: var(--line); margin: 10px auto 18px; }
+
+  .ticket-head{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
+  .ticket-no{ font-family: var(--font-mono); font-size:11px; color: var(--text-faint); letter-spacing:0.05em; }
+  .ticket-sn{ font-family: var(--font-mono); font-size:22px; font-weight:700; color:var(--text); margin-top:4px; word-break:break-all; }
+  .close-btn{
+    width:32px; height:32px; border-radius:10px; border:none; flex-shrink:0; background: var(--surface-2); color: var(--text-dim);
+    font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:12px;
+  }
+
+  .stamp-zone{ display:flex; justify-content:center; margin: 4px 0 20px; }
+  .stamp{
+    border: 2.5px solid currentColor; border-radius: 12px; padding: 10px 22px; transform: rotate(-3deg);
+    font-family: var(--font-display); font-weight:700; font-size:19px; letter-spacing:0.06em; text-transform:uppercase; position:relative;
+  }
+
+  .perf{ border-top: 1.5px dashed var(--line); margin: 4px 0 18px; position:relative; }
+  .perf::before, .perf::after{ content:''; position:absolute; top:-9px; width:18px; height:18px; border-radius:50%; background: var(--bg); }
+  .perf::before{ left:-31px; } .perf::after{ right:-31px; }
+
+  .detail-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; margin-bottom:20px; }
+  .detail-item .label{ font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color: var(--text-faint); margin-bottom:4px; font-weight:600; }
+  .detail-item .value{ font-size:14px; font-weight:600; color: var(--text); }
+  .detail-item .value.mono{ font-family: var(--font-mono); font-size:13px; }
+
+  .status-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .badge{ display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:7px 12px; border-radius:9px; border:1px solid var(--line); background: var(--surface-2); }
+  .badge .dot{ width:6px; height:6px; border-radius:50%; }
+
+  .import-overlay{
+    position:fixed; inset:0; z-index:25; background: rgba(20,25,45,0.45); backdrop-filter: blur(2px);
+    display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  .import-overlay.show{ opacity:1; pointer-events:auto; }
+  @media (min-width:640px){ .import-overlay{ align-items:center; } }
+  .import-sheet{
+    width:100%; max-width:480px; background: var(--surface); border-radius: 24px 24px 0 0; padding: 10px 22px 28px;
+    transform: translateY(30px); transition: transform .25s cubic-bezier(.2,.8,.2,1); max-height: 90vh; overflow-y:auto;
+    box-shadow: 0 -10px 40px rgba(20,25,60,0.15);
+  }
+  @media (min-width:640px){ .import-sheet{ border-radius:24px; } }
+  .import-overlay.show .import-sheet{ transform: translateY(0); }
+
+  .import-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .import-title{ font-family: var(--font-display); font-size:18px; font-weight:700; }
+  .import-desc{ font-size:12.5px; color: var(--text-dim); margin: 6px 0 18px; line-height:1.5; }
+
+  .drop-zone{
+    border: 2px dashed var(--line); border-radius: 16px; background: var(--surface-2); padding: 30px 16px;
+    text-align:center; cursor:pointer; transition: all .15s ease; margin-bottom: 14px;
+  }
+  .drop-zone.dragover{ border-color: var(--violet); background: var(--surface-tint); }
+  .drop-zone .dz-icon{ font-size:30px; margin-bottom:10px; }
+  .drop-zone .dz-title{ font-weight:600; font-size:14px; color: var(--text); margin-bottom:4px; }
+  .drop-zone .dz-desc{ font-size:12px; color: var(--text-faint); }
+  #fileInput{ display:none; }
+
+  .import-status{ font-size:12.5px; padding: 12px 14px; border-radius:12px; margin-bottom:14px; display:none; line-height:1.5; }
+  .import-status.ok{ display:block; background:#EAFBF3; color:#0F7A46; border:1px solid #C7EFDC; }
+  .import-status.err{ display:block; background:#FDECEA; color:#B3261E; border:1px solid #F6CFC9; }
+  .import-status.loading{ display:block; background:#FFF6E9; color:#92600C; border:1px solid #F6E3BF; }
+
+  .import-hint{ font-size:11.5px; color: var(--text-faint); background: var(--surface-2); border-radius:12px; padding:12px 14px; margin-bottom:6px; line-height:1.6; }
+  .import-hint b{ color: var(--text-dim); }
+
+  .export-btn{
+    width:100%; margin-top:14px; background: var(--surface); border: 1.5px solid var(--line); color: var(--text);
+    font-weight:600; font-size:13.5px; padding: 13px; border-radius:14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .export-btn:hover{ border-color: var(--violet); color: var(--violet-dim); }
+
+  footer{ position:relative; z-index:1; text-align:center; padding:10px 20px 90px; font-size:11px; color: var(--text-faint); font-family: var(--font-mono); }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-row">
+    <div class="brand-mark">MUF</div>
+    <div>
+      <h1>Device Tracker</h1>
+      <div class="subtitle">MINI PC THINKCENTRE · DEPLOYMENT</div>
+    </div>
+  </div>
+  <div class="sync-pill loading" id="syncPill"><span class="sync-dot"></span><span id="syncText">Menyambungkan ke Google Sheets…</span></div>
+</header>
+
+<main>
+  <div class="search-wrap">
+    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <input id="search" type="text" inputmode="search" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Cari serial number...">
+    <button class="clear-btn" id="clearBtn" aria-label="Hapus pencarian">✕</button>
+  </div>
+
+  <div class="chips" id="chips"></div>
+
+  <div class="list-meta" id="listMeta"></div>
+  <div id="results"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <div class="icon">⌕</div>
+    <div class="title">Tidak ditemukan</div>
+    <div class="desc">Tidak ada device dengan serial number tersebut. Coba periksa kembali penulisannya.</div>
+  </div>
+</main>
+
+<footer id="footerCount">300 UNIT · MANDIRI UTAMA FINANCE</footer>
+
+<button class="fab" id="fabBtn" aria-label="Tambah data">+</button>
+
+<div class="overlay" id="overlay">
+  <div class="ticket" id="ticket">
+    <div class="drag-handle"></div>
+    <div class="ticket-head">
+      <div>
+        <div class="ticket-no" id="ticketNo">UNIT NO. —</div>
+        <div class="ticket-sn" id="ticketSn">—</div>
+      </div>
+      <button class="close-btn" id="closeBtn" aria-label="Tutup">✕</button>
+    </div>
+    <div class="stamp-zone"><div class="stamp" id="stamp">—</div></div>
+    <div class="perf"></div>
+    <div class="detail-grid" id="detailGrid"></div>
+    <div class="status-row" id="statusRow"></div>
+  </div>
+</div>
+
+<div class="import-overlay" id="importOverlay">
+  <div class="import-sheet">
+    <div class="drag-handle"></div>
+    <div class="import-head">
+      <div class="import-title">Tambah Data Device</div>
+      <button class="close-btn" id="importCloseBtn" aria-label="Tutup">✕</button>
+    </div>
+    <div class="import-desc">Unggah file Excel (.xlsx/.csv) berisi data device baru. Kolom akan terdeteksi otomatis, dan hasilnya langsung tersimpan permanen ke Google Sheets — semua HP yang pakai app ini akan melihat data terbaru.</div>
+
+    <div class="drop-zone" id="dropZone">
+      <div class="dz-icon">📄</div>
+      <div class="dz-title">Tap untuk pilih file, atau drag & drop</div>
+      <div class="dz-desc">Format: .xlsx, .xls, atau .csv</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+    </div>
+
+    <div class="import-status" id="importStatus"></div>
+
+    <div class="import-hint">
+      Kolom yang dikenali: <b>Serial Number</b>, Jenis Device, Brand, Model, Start Contract, End Contract, Status Install, Status Pengiriman, <b>Lokasi Perangkat</b>. Nama kolom tidak harus persis sama.
+    </div>
+
+    <button class="export-btn" id="exportBtn">⬇ Unduh Salinan Database (.xlsx)</button>
+  </div>
+</div>
+
+<script>
+/* ---------- KONFIGURASI GOOGLE SHEETS ---------- */
+const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbycH7uvW-pOVFZVYhv5Huai4_gr1XIhKhKtfWrvf6voa9bDzbY9Rn8rmrSkNI_TdQ7q/exec';
+const BACKEND_KEY = 'Raffael_Ganteng';
+
+/* Data cadangan (offline) — dipakai kalau HP tidak ada internet / gagal konek ke Sheets */
+let DEVICES = [{"no": 1, "sn": "GM13HVFV", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 2, "sn": "GM13HZ69", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 3, "sn": "GM13HZ1K", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 4, "sn": "GM13HZ1N", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 5, "sn": "GM13HZA8", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 6, "sn": "GM13HZ3W", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 7, "sn": "GM13HZD5", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 8, "sn": "GM13HZE2", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 9, "sn": "GM13HZBC", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 10, "sn": "GM13HVJK", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 11, "sn": "GM13HVBV", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 12, "sn": "GM13HVCS", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 13, "sn": "GM13HVEW", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 14, "sn": "GM13HVEM", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 15, "sn": "GM13HVE2", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 16, "sn": "GM13HVKN", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 17, "sn": "GM13HVKF", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 18, "sn": "GM13HVKH", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 19, "sn": "GM13HVLP", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 20, "sn": "GM13HVLM", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Cikarang"}, {"no": 21, "sn": "GM13HVMS", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bandung"}, {"no": 22, "sn": "GM13HZCS", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bandung"}, {"no": 23, "sn": "GM13HXKE", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bandung"}, {"no": 24, "sn": "GM13HXKC", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bandung"}, {"no": 25, "sn": "GM13HZ13", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bandung"}, {"no": 26, "sn": "GM13HZ3A", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bandung"}, {"no": 27, "sn": "GM13HZC9", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bandung"}, {"no": 28, "sn": "GM13HZ5N", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bandung"}, {"no": 29, "sn": "GM13HZ1F", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bandung"}, {"no": 30, "sn": "GM13HZ74", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bandung"}, {"no": 31, "sn": "GM13HZE7", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 32, "sn": "GM13HZ3Y", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 33, "sn": "GM13HXGW", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 34, "sn": "GM13HZDS", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 35, "sn": "GM13HZB4", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 36, "sn": "GM13HVM2", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 37, "sn": "GM13HXMS", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 38, "sn": "GM13HVD5", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 39, "sn": "GM13HZDW", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 40, "sn": "GM13HZC8", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 41, "sn": "GM13HZEP", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 42, "sn": "GM13HZE5", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 43, "sn": "GM13HVE8", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 44, "sn": "GM13HVKQ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 45, "sn": "GM13HVEN", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 46, "sn": "GM13HVEK", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 47, "sn": "GM13HVKT", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 48, "sn": "GM13HVEJ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 49, "sn": "GM13HVEB", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 50, "sn": "GM13HVEA", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 51, "sn": "GM13HVEL", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 52, "sn": "GM13HVLN", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 53, "sn": "GM13HVKR", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 54, "sn": "GM13HVKA", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 55, "sn": "GM13HZ0A", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 56, "sn": "GM13HXLE", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 57, "sn": "GM13HXF5", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 58, "sn": "GM13HVMT", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 59, "sn": "GM13HZ7P", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 60, "sn": "GM13HV76", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 61, "sn": "GM13HZB9", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 62, "sn": "GM13HVJD", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 63, "sn": "GM13HXN3", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 64, "sn": "GM13HZAG", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 65, "sn": "GM13HZ4S", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 66, "sn": "GM13HZ9R", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 67, "sn": "GM13HVE4", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 68, "sn": "GM13HVKL", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 69, "sn": "GM13HVED", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 70, "sn": "GM13HVEF", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 71, "sn": "GM13HVKW", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 72, "sn": "GM13HVEZ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 73, "sn": "GM13HVL8", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 74, "sn": "GM13HVEY", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 75, "sn": "GM13HZAE", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 76, "sn": "GM13HZ5D", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 77, "sn": "GM13HVCC", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 78, "sn": "GM13HVHR", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 79, "sn": "GM13HVJ8", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 80, "sn": "GM13HVHQ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Jakarta"}, {"no": 81, "sn": "GM13HVMM", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 82, "sn": "GM13HVJ7", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 83, "sn": "GM13HVCQ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 84, "sn": "GM13HVC7", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 85, "sn": "GM13HVJ0", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 86, "sn": "GM13HVCP", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 87, "sn": "GM13HVMG", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 88, "sn": "GM13HVMN", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 89, "sn": "GM13HVKZ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 90, "sn": "GM13HVE0", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 91, "sn": "GM13HVG3", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 92, "sn": "GM13HZ4Y", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 93, "sn": "GM13HZBJ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 94, "sn": "GM13HZDY", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 95, "sn": "GM13HXH2", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 96, "sn": "GM13HV73", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 97, "sn": "GM13HZ25", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 98, "sn": "GM13HVJF", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 99, "sn": "GM13HVL9", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 100, "sn": "GM13HVE9", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Bogor"}, {"no": 101, "sn": "GM13HXK4", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 102, "sn": "GM13HXJ7", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 103, "sn": "GM13HXKX", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 104, "sn": "GM13HXMQ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 105, "sn": "GM13HXJ3", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 106, "sn": "GM13HXNA", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 107, "sn": "GM13HXJ1", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 108, "sn": "GM13HXK9", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 109, "sn": "GM13HVJ2", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 110, "sn": "GM13HVHG", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 111, "sn": "GM13HVHH", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 112, "sn": "GM13HVHX", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 113, "sn": "GM13HV9L", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 114, "sn": "GM13HVN4", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 115, "sn": "GM13HVMV", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 116, "sn": "GM13HVHW", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 117, "sn": "GM13HVGZ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 118, "sn": "GM13HVMX", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 119, "sn": "GM13HVMH", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 120, "sn": "GM13HVMY", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 121, "sn": "GM13HVGN", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 122, "sn": "GM13HVGR", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 123, "sn": "GM13HVGK", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 124, "sn": "GM13HVHM", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 125, "sn": "GM13HXLK", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 126, "sn": "GM13HXJG", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 127, "sn": "GM13HXM0", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 128, "sn": "GM13HXJ2", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 129, "sn": "GM13HXLV", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 130, "sn": "GM13HXMP", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 131, "sn": "GM13HVMW", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 132, "sn": "GM13HXJ8", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 133, "sn": "GM13HVGY", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 134, "sn": "GM13HVJ1", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 135, "sn": "GM13HVD4", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 136, "sn": "GM13HVJ4", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 137, "sn": "GM13HVJ5", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 138, "sn": "GM13HVJL", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 139, "sn": "GM13HVGX", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 140, "sn": "GM13HVGS", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 141, "sn": "GM13HVJ3", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 142, "sn": "GM13HVN5", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 143, "sn": "GM13HVGW", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 144, "sn": "GM13HVHK", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 145, "sn": "GM13HVHL", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 146, "sn": "GM13HVGL", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 147, "sn": "GM13HVH3", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 148, "sn": "GM13HVH2", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 149, "sn": "GM13HVGJ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 150, "sn": "GM13HVHP", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 151, "sn": "GM13HXN2", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 152, "sn": "GM13HXL4", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 153, "sn": "GM13HXL0", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 154, "sn": "GM13HXKK", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 155, "sn": "GM13HXJ9", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 156, "sn": "GM13HXMB", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 157, "sn": "GM13HXL9", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 158, "sn": "GM13HXLA", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 159, "sn": "GM13HVJJ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 160, "sn": "GM13HVJP", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 161, "sn": "GM13HVJC", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 162, "sn": "GM13HVHC", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 163, "sn": "GM13HVGM", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 164, "sn": "GM13HVH5", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 165, "sn": "GM13HVN1", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 166, "sn": "GM13HVH0", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 167, "sn": "GM13HVH9", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 168, "sn": "GM13HVHN", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 169, "sn": "GM13HVMJ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 170, "sn": "GM13HVH6", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 171, "sn": "GM13HVN0", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 172, "sn": "GM13HVMZ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 173, "sn": "GM13HVHE", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 174, "sn": "GM13HVGH", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 175, "sn": "GM13HXJX", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 176, "sn": "GM13HXK6", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 177, "sn": "GM13HXLG", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 178, "sn": "GM13HXK1", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 179, "sn": "GM13HXJA", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 180, "sn": "GM13HVMR", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 181, "sn": "GM13HVHV", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 182, "sn": "GM13HVMQ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 183, "sn": "GM13HVHT", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 184, "sn": "GM13HVHF", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 185, "sn": "GM13HVJH", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 186, "sn": "GM13HVHJ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 187, "sn": "GM13HV59", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 188, "sn": "GM13HVML", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 189, "sn": "GM13HVJB", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 190, "sn": "GM13HVJG", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 191, "sn": "GM13HVJN", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 192, "sn": "GM13HVH8", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 193, "sn": "GM13HVMP", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 194, "sn": "GM13HVHB", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 195, "sn": "GM13HVHA", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 196, "sn": "GM13HVGP", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 197, "sn": "GM13HVGT", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 198, "sn": "GM13HVH4", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 199, "sn": "GM13HVGV", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 200, "sn": "GM13HVH1", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Done", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 201, "sn": "GM13HXM2", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 202, "sn": "GM13HZ3H", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 203, "sn": "GM13HZ5Y", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 204, "sn": "GM13HXEN", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 205, "sn": "GM13HZ3E", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 206, "sn": "GM13HXDZ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 207, "sn": "GM13HXFP", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 208, "sn": "GM13HXDT", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 209, "sn": "GM13HXFX", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 210, "sn": "GM13HXGR", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 211, "sn": "GM13HXEA", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 212, "sn": "GM13HZ3K", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 213, "sn": "GM13HZ0F", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 214, "sn": "GM13HXMD", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 215, "sn": "GM13HZ0J", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 216, "sn": "GM13HXMX", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 217, "sn": "GM13HXFS", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 218, "sn": "GM13HXGM", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 219, "sn": "GM13HXFN", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 220, "sn": "GM13HZ8B", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 221, "sn": "GM13HZ3N", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 222, "sn": "GM13HXEG", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 223, "sn": "GM13HXJC", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 224, "sn": "GM13HZ72", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 225, "sn": "GM13HXKW", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 226, "sn": "GM13HXN6", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 227, "sn": "GM13HXJM", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 228, "sn": "GM13HXKB", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 229, "sn": "GM13HXL2", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 230, "sn": "GM13HXMV", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 231, "sn": "GM13HXLY", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 232, "sn": "GM13HXL1", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 233, "sn": "GM13HXJ6", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 234, "sn": "GM13HZ6V", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 235, "sn": "GM13HZ97", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 236, "sn": "GM13HZ84", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 237, "sn": "GM13HZ6K", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 238, "sn": "GM13HXJV", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 239, "sn": "GM13HZ39", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 240, "sn": "GM13HZ35", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 241, "sn": "GM13HZ0D", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 242, "sn": "GM13HZ8A", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 243, "sn": "GM13HZ50", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 244, "sn": "GM13HZ8Q", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 245, "sn": "GM13HXEX", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 246, "sn": "GM13HZ2Y", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 247, "sn": "GM13HXJT", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 248, "sn": "GM13HXMF", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 249, "sn": "GM13HZ86", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 250, "sn": "GM13HXN8", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 251, "sn": "GM13HXKY", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 252, "sn": "GM13HXN9", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 253, "sn": "GM13HXKD", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 254, "sn": "GM13HXLD", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 255, "sn": "GM13HXDW", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 256, "sn": "GM13HZ3D", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 257, "sn": "GM13HZ4Q", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 258, "sn": "GM13HZ51", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 259, "sn": "GM13HXDV", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 260, "sn": "GM13HXLS", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 261, "sn": "GM13HZ8J", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 262, "sn": "GM13HXGS", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 263, "sn": "GM13HZ91", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 264, "sn": "GM13HZ96", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 265, "sn": "GM13HZ3V", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 266, "sn": "GM13HZ8E", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 267, "sn": "GM13HZ8H", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 268, "sn": "GM13HZ8V", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 269, "sn": "GM13HZDF", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 270, "sn": "GM13HXKG", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 271, "sn": "GM13HZ1D", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 272, "sn": "GM13HXNG", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 273, "sn": "GM13HXKH", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 274, "sn": "GM13HZBL", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 275, "sn": "GM13HXJR", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 276, "sn": "GM13HXKJ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 277, "sn": "GM13HXKZ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 278, "sn": "GM13HXLW", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 279, "sn": "GM13HXJS", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 280, "sn": "GM13HXLB", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 281, "sn": "GM13HXEZ", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 282, "sn": "GM13HZ8K", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 283, "sn": "GM13HZCP", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 284, "sn": "GM13HXGP", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 285, "sn": "GM13HZ3L", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 286, "sn": "GM13HZ23", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 287, "sn": "GM13HZ3S", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 288, "sn": "GM13HXET", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 289, "sn": "GM13HZ8P", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 290, "sn": "GM13HZ89", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 291, "sn": "GM13HZ8F", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 292, "sn": "GM13HXDS", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 293, "sn": "GM13HXNH", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 294, "sn": "GM13HXME", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 295, "sn": "GM13HZ2S", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 296, "sn": "GM13HXNC", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 297, "sn": "GM13HXKA", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 298, "sn": "GM13HXNE", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 299, "sn": "GM13HXLC", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}, {"no": 300, "sn": "GM13HZ7R", "jenis": "Mini PC", "brand": "Lenovo", "model": "ThinkCentre", "startContract": "", "endContract": "", "install": "Pending", "kirim": "Belum Terkirim", "lokasi": "Gudang BGR"}];
+
+const syncPill = document.getElementById('syncPill');
+const syncText = document.getElementById('syncText');
+
+function setSync(state, text){
+  syncPill.className = 'sync-pill ' + state;
+  syncText.textContent = text;
+}
+
+function fmtTime(iso){
+  try{
+    const d = new Date(iso);
+    return d.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+  } catch(e){ return ''; }
+}
+
+async function loadFromSheet(isRetry){
+  setSync('loading', isRetry ? 'Menyegarkan data…' : 'Menyambungkan ke Google Sheets…');
+  try{
+    const res = await fetch(BACKEND_URL, {method:'GET'});
+    const json = await res.json();
+    if(json.ok && Array.isArray(json.devices) && json.devices.length){
+      DEVICES = json.devices;
+      setSync('ok', `Tersambung · diperbarui ${fmtTime(json.updatedAt)}`);
+    } else {
+      setSync('off', 'Gagal ambil data · pakai data cadangan (tap untuk coba lagi)');
+    }
+  } catch(err){
+    setSync('off', 'Mode offline · pakai data cadangan (tap untuk coba lagi)');
+  }
+  buildChips();
+  render();
+}
+
+const LOC_COLORS = {
+  'Jakarta':    'var(--amber)',
+  'Cikarang':   'var(--blue)',
+  'Bandung':    'var(--purple)',
+  'Bogor':      'var(--teal)',
+  'Gudang BGR': 'var(--gray)',
+};
+function locColor(loc){ return LOC_COLORS[loc] || 'var(--gray)'; }
+
+const chipsEl = document.getElementById('chips');
+const resultsEl = document.getElementById('results');
+const searchEl = document.getElementById('search');
+const clearBtn = document.getElementById('clearBtn');
+const emptyState = document.getElementById('emptyState');
+const listMeta = document.getElementById('listMeta');
+const footerCount = document.getElementById('footerCount');
+
+let activeFilter = null;
+
+function buildChips(){
+  const counts = {};
+  DEVICES.forEach(d => counts[d.lokasi] = (counts[d.lokasi]||0)+1);
+  const locs = Object.keys(counts).sort((a,b)=>{
+    if(a==='Gudang BGR') return 1;
+    if(b==='Gudang BGR') return -1;
+    return counts[b]-counts[a];
+  });
+
+  let html = `<div class="chip ${activeFilter===null?'active':''}" data-loc="">
+    <span class="dot" style="background:var(--text-dim)"></span>Semua <span class="count">${DEVICES.length}</span>
+  </div>`;
+  locs.forEach(loc=>{
+    html += `<div class="chip ${activeFilter===loc?'active':''}" data-loc="${loc}">
+      <span class="dot" style="background:${locColor(loc)}"></span>${loc} <span class="count">${counts[loc]}</span>
+    </div>`;
+  });
+  chipsEl.innerHTML = html;
+
+  chipsEl.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      activeFilter = chip.dataset.loc || null;
+      buildChips();
+      render();
+    });
+  });
+  footerCount.textContent = `${DEVICES.length} UNIT · MANDIRI UTAMA FINANCE`;
+}
+
+function highlight(text, q){
+  if(!q) return text;
+  const idx = text.toUpperCase().indexOf(q.toUpperCase());
+  if(idx === -1) return text;
+  return text.slice(0,idx) + '<mark>' + text.slice(idx, idx+q.length) + '</mark>' + text.slice(idx+q.length);
+}
+
+function render(){
+  const q = searchEl.value.trim();
+  clearBtn.classList.toggle('show', q.length>0);
+
+  let list = DEVICES;
+  if(activeFilter) list = list.filter(d => d.lokasi === activeFilter);
+  if(q) list = list.filter(d => d.sn.toUpperCase().includes(q.toUpperCase()));
+
+  const capped = (!q && !activeFilter);
+  const showList = capped ? list.slice(0, 40) : list;
+
+  if(list.length === 0){
+    resultsEl.innerHTML = '';
+    emptyState.style.display = 'flex';
+    listMeta.textContent = '';
+    return;
+  }
+  emptyState.style.display = 'none';
+
+  listMeta.textContent = capped
+    ? `Menampilkan 40 dari ${list.length} unit — ketik SN untuk mencari`
+    : `${list.length} unit ditemukan`;
+
+  resultsEl.innerHTML = showList.map(d => `
+    <div class="row-item" data-sn="${d.sn}">
+      <span class="row-sn">${highlight(d.sn, q)}</span>
+      <span class="loc-pill" style="color:${locColor(d.lokasi)};background:color-mix(in srgb, ${locColor(d.lokasi)} 16%, transparent);">${d.lokasi}</span>
+      <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </div>
+  `).join('');
+
+  resultsEl.querySelectorAll('.row-item').forEach(el=>{
+    el.addEventListener('click', ()=> openTicket(el.dataset.sn));
+  });
+}
+
+const overlay = document.getElementById('overlay');
+
+function openTicket(sn){
+  const d = DEVICES.find(x => x.sn === sn);
+  if(!d) return;
+
+  document.getElementById('ticketNo').textContent = `UNIT NO. ${String(d.no).padStart(3,'0')}`;
+  document.getElementById('ticketSn').textContent = d.sn;
+
+  const stamp = document.getElementById('stamp');
+  stamp.textContent = d.lokasi;
+  stamp.style.color = locColor(d.lokasi);
+
+  document.getElementById('detailGrid').innerHTML = `
+    <div class="detail-item"><div class="label">Jenis Device</div><div class="value">${d.jenis}</div></div>
+    <div class="detail-item"><div class="label">Brand / Model</div><div class="value">${d.brand} ${d.model}</div></div>
+    <div class="detail-item"><div class="label">Start Contract</div><div class="value mono">${d.startContract || '—'}</div></div>
+    <div class="detail-item"><div class="label">End Contract</div><div class="value mono">${d.endContract || '—'}</div></div>
+  `;
+
+  const installColor = d.install === 'Done' ? 'var(--green)' : 'var(--amber)';
+  const kirimColor = d.kirim === 'Terkirim' ? 'var(--green)' : 'var(--gray)';
+  document.getElementById('statusRow').innerHTML = `
+    <span class="badge" style="color:${installColor}"><span class="dot" style="background:${installColor}"></span>Install: ${d.install}</span>
+    <span class="badge" style="color:${kirimColor}"><span class="dot" style="background:${kirimColor}"></span>${d.kirim}</span>
+  `;
+
+  overlay.classList.add('show');
+}
+
+document.getElementById('closeBtn').addEventListener('click', ()=> overlay.classList.remove('show'));
+overlay.addEventListener('click', (e)=>{ if(e.target === overlay) overlay.classList.remove('show'); });
+
+searchEl.addEventListener('input', render);
+clearBtn.addEventListener('click', ()=>{ searchEl.value=''; searchEl.focus(); render(); });
+
+syncPill.addEventListener('click', ()=> loadFromSheet(true));
+
+/* ---------- IMPORT FEATURE (upload -> Google Sheets) ---------- */
+const fabBtn = document.getElementById('fabBtn');
+const importOverlay = document.getElementById('importOverlay');
+const importCloseBtn = document.getElementById('importCloseBtn');
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const importStatus = document.getElementById('importStatus');
+const exportBtn = document.getElementById('exportBtn');
+
+fabBtn.addEventListener('click', ()=>{ importOverlay.classList.add('show'); importStatus.className='import-status'; });
+importCloseBtn.addEventListener('click', ()=> importOverlay.classList.remove('show'));
+importOverlay.addEventListener('click', (e)=>{ if(e.target === importOverlay) importOverlay.classList.remove('show'); });
+
+dropZone.addEventListener('click', ()=> fileInput.click());
+dropZone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e)=>{
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e)=>{
+  if(e.target.files.length) handleFile(e.target.files[0]);
+});
+
+const HEADER_PATTERNS = {
+  sn: /serial|^sn$/i,
+  jenis: /jenis|type/i,
+  brand: /brand|merek/i,
+  model: /model/i,
+  startContract: /start.*contract|mulai.*kontrak|contract.*start|tanggal mulai/i,
+  endContract: /end.*contract|akhir.*kontrak|contract.*end|selesai.*kontrak|tanggal akhir|expired/i,
+  install: /install/i,
+  kirim: /kirim|pengiriman|shipping/i,
+  lokasi: /lokasi|location/i,
+};
+
+function detectHeaderRow(rows){
+  for(let i=0;i<Math.min(rows.length,15);i++){
+    const row = rows[i].map(c => (c==null?'':String(c)));
+    const joined = row.join(' ').toLowerCase();
+    if(HEADER_PATTERNS.sn.test(joined)) return i;
+  }
+  return -1;
+}
+
+function buildColumnMap(headerRow){
+  const map = {};
+  headerRow.forEach((cell, idx)=>{
+    const val = cell==null? '' : String(cell);
+    for(const key in HEADER_PATTERNS){
+      if(!map.hasOwnProperty(key) && HEADER_PATTERNS[key].test(val)){
+        map[key] = idx;
+      }
+    }
+  });
+  return map;
+}
+
+function showStatus(type, msg){
+  importStatus.className = 'import-status ' + type;
+  importStatus.textContent = msg;
+}
+
+function handleFile(file){
+  showStatus('loading', 'Membaca file...');
+  const reader = new FileReader();
+  reader.onload = async (e)=>{
+    let parsed;
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const sheetName = wb.SheetNames.find(n => /master/i.test(n)) || wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
+
+      const headerIdx = detectHeaderRow(rows);
+      if(headerIdx === -1){
+        showStatus('err', 'Kolom Serial Number tidak ditemukan di file ini. Pastikan file punya kolom header seperti "Serial Number".');
+        return;
+      }
+      const colMap = buildColumnMap(rows[headerIdx]);
+      if(colMap.sn === undefined){
+        showStatus('err', 'Kolom Serial Number tidak terdeteksi. Cek nama kolom di file kamu.');
+        return;
+      }
+
+      parsed = [];
+      for(let i = headerIdx+1; i < rows.length; i++){
+        const r = rows[i];
+        const snRaw = r[colMap.sn];
+        const sn = snRaw==null? '' : String(snRaw).trim().toUpperCase();
+        if(!sn) continue;
+
+        const get = (key) => (colMap[key] !== undefined && r[colMap[key]] !== '' && r[colMap[key]] != null) ? String(r[colMap[key]]).trim() : undefined;
+
+        parsed.push({
+          sn: sn,
+          jenis: get('jenis'),
+          brand: get('brand'),
+          model: get('model'),
+          startContract: get('startContract'),
+          endContract: get('endContract'),
+          install: get('install'),
+          kirim: get('kirim'),
+          lokasi: get('lokasi'),
+        });
+      }
+
+      if(parsed.length === 0){
+        showStatus('err', 'Tidak ada baris data yang valid di file ini.');
+        return;
+      }
+    } catch(err){
+      showStatus('err', 'Gagal membaca file. Pastikan formatnya .xlsx, .xls, atau .csv yang valid.');
+      return;
+    }
+
+    showStatus('loading', `Menyimpan ${parsed.length} baris ke Google Sheets...`);
+    try{
+      const res = await fetch(BACKEND_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        body: JSON.stringify({ key: BACKEND_KEY, action: 'bulkUpsert', devices: parsed })
+      });
+      const json = await res.json();
+      if(json.ok){
+        showStatus('ok', `Berhasil! ${json.added} device baru, ${json.updated} diperbarui.`);
+        await loadFromSheet(true);
+      } else {
+        showStatus('err', 'Gagal menyimpan: ' + (json.error || 'kesalahan tidak diketahui'));
+      }
+    } catch(err){
+      showStatus('err', 'Gagal terhubung ke Google Sheets. Periksa koneksi internet lalu coba lagi.');
+    }
+    fileInput.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+exportBtn.addEventListener('click', ()=>{
+  const header = ['No','Serial Number','Jenis Device','Brand','Model','Start Contract','End Contract','Status Install','Status Pengiriman','Lokasi Perangkat'];
+  const rows = DEVICES.map(d => [d.no, d.sn, d.jenis, d.brand, d.model, d.startContract, d.endContract, d.install, d.kirim, d.lokasi]);
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Masterdata');
+  const today = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `MUF-Masterdata-Backup-${today}.xlsx`);
+});
+
+buildChips();
+render();
+loadFromSheet(false);
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
